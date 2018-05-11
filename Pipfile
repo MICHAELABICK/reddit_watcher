@@ -1,0 +1,13 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+
+[packages]
+requests = "*"
+peewee = {git = "https://github.com/coleifer/peewee", editable = true}
+
+[requires]
+python_version = "3.6"
