@@ -1,2 +1,3 @@
 tags
+*.db
 secrets.py
