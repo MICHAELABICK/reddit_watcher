@@ -62,25 +62,56 @@ class BaseModel(Model):
     class Meta:
         database = db
 
-class RedditWatchedSearch(BaseModel):
+    # will fail if the subclasses' __str__ method fails
+    @classmethod
+    def list(cls):
+        for record in cls.select(): # iterate through all searches
+            print(record)
+
+class RedditSearch:
+    reddit_search_url = 'https://reddit.com/search'
+    reddit_json_search = reddit_search_url + '.json'
+    # TODO: determine if I can pass self.default_search_limit as a default argument
+
+    sort = None
+
+    def __init__(self, query):
+        self.query = query
+
+    def result(self, limit = None):
+        raise NotImplementedError
+
+    def first_result(self):
+        return self.result(limit = 1)[0]
+
+    def reddit_url(self):
+        return reddit_search_url + self.query_string(self._params())
+
+    # if sort is redefined in a subclass, it changes the sorting method
+    def _params(self, limit = None):
+        return {
+                'limit': limit,
+                'q': self.query,
+                'sort': self.sort,
+                'type': 'link'
+            }
+
+    @staticmethod
+    def query_string(params):
+        # custom encode the params to make the query string shorter
+        return urllib.parse.urlencode(params, safe='()')
+
+class RedditWatchedSearch(BaseModel, RedditSearch):
     uuid            = UUIDField()
     title           = TextField()
     query           = TextField()
     user_agent_base = TextField()
     last_run_utc    = TimestampField()
 
-    reddit_search_url = 'https://reddit.com/search'
-    reddit_json_search = reddit_search_url + '.json'
     sort = 'new'
-    # TODO: determine if I can pass self.default_search_limit as a default argument
 
     class Meta:
         table_name = 'searches'
-
-    @classmethod
-    def list(cls):
-        for search in cls.select(): # iterate through all searches
-            print(str(search.uuid) + ' ' + search.user_agent_base)
 
     def result(self, limit = 10, print_search_url=False, print_json_result=False):
         headers = {
@@ -101,12 +132,6 @@ class RedditWatchedSearch(BaseModel):
 
         return result_posts
 
-    def first_result(self):
-        return self.result(limit = 1)[0]
-
-    def reddit_url(self):
-        return reddit_search_url + self.query_string(self._params())
-
     def update_last_run_utc(self, last_run_utc):
         self.last_run_utc = last_run_utc
         self.save()
@@ -114,18 +139,8 @@ class RedditWatchedSearch(BaseModel):
     def _user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 
-    def _params(self, limit = None):
-        return {
-                'limit': limit,
-                'q': self.query,
-                'sort': self.sort,
-                'type': 'link'
-            }
-
-    @staticmethod
-    def query_string(params):
-        # custom encode the params to make the query string shorter
-        return urllib.parse.urlencode(params, safe='()')
+    def __str__(self):
+        return '{self.uuid!s} {self.user_agent_base}'.format(self=self)
 
 class RedditPost:
     def __init__(self, title, posted_utc, url):
