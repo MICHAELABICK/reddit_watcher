@@ -151,7 +151,7 @@ class Pushable:
     def __hash__(self):
         return 1
 
-# TODO: fixup pushbuleet
+# TODO: fixup pushbullet
 class PushbulletAccount:
     user_agent = USER_AGENT_BEG + USER_AGENT_END
     pb_create_push_url = 'https://api.pushbullet.com/v2/pushes'
