@@ -85,10 +85,13 @@ class RedditSearch:
         return self.result(limit = 1)[0]
 
     def reddit_url(self):
-        return reddit_search_url + self.query_string(self._params())
+        return reddit_search_url + self.query_string(self.params())
+
+    def _user_agent(self):
+        return USER_AGENT_BEG + USER_AGENT_END
 
     # if sort is redefined in a subclass, it changes the sorting method
-    def _params(self, limit = None):
+    def params(self, limit = None):
         return {
                 'limit': limit,
                 'q': self.query,
@@ -117,7 +120,7 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
         headers = {
                 'User-Agent': self._user_agent()
             }
-        payload = self._params(limit = limit)
+        payload = self.params(limit = limit)
         # print(self.query)
 
         r = requests.get(self.reddit_json_search, headers = headers, params = self.query_string(payload))
@@ -136,6 +139,7 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
         self.last_run_utc = last_run_utc
         self.save()
 
+    # redefine the user agent such that each search has a different one
     def _user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 
