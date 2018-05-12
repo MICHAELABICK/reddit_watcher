@@ -18,6 +18,8 @@ def main():
     db.connect()
     pb = PushbulletAccount(PB_ACCESS_TOKEN)
 
+    # TODO: currently it still pushes multiple because every pushable that
+        # is created is actually different
     # create an empty set of the posts we will push so that we do not
     # push multiples of overlapping search hits
     posts_to_push = set()
@@ -32,7 +34,7 @@ def main():
             posts_to_push.add(create_pushable(search, post))
 
         # remember to only update if the pushables were actually sent
-        # search.update_last_run_utc(curr_time)
+        search.update_last_run_utc(curr_time)
 
     pb.push_iterable(posts_to_push, print_pushes=True)
     db.close()
@@ -67,7 +69,8 @@ class RedditWatchedSearch(BaseModel):
     user_agent_base = TextField()
     last_run_utc    = TimestampField()
 
-    reddit_search_url = 'https://reddit.com/search.json'
+    reddit_search_url = 'https://reddit.com/search'
+    reddit_json_search = reddit_search_url + '.json'
     sort = 'new'
     # TODO: determine if I can pass self.default_search_limit as a default argument
 
@@ -83,17 +86,13 @@ class RedditWatchedSearch(BaseModel):
         headers = {
                 'User-Agent': self.user_agent()
             }
-        payload = {
-                'limit': limit,
-                'q': self.query,
-                'sort': self.sort,
-                'type': 'link'
-            }
+        params = self.query_string(limit)
         # print(self.query)
 
-        r = requests.get(self.reddit_search_url, headers = headers, params = self.query_string(payload))
+        r = requests.get(self.reddit_json_search, headers = headers, params = params)
         json_data = r.json()['data']['children'] # contains a list of dicts, with each dict containing a result post's data
-        if print_search_url: print(r.url)
+        # if print_search_url: print(r.url) # print json search url
+        if print_search_url: print(self.reddit_url) # print human-readable search url
         if print_json_result: print(json.dumps(json_data, indent=2))
 
         result_posts = []
@@ -105,6 +104,9 @@ class RedditWatchedSearch(BaseModel):
     def first_result(self):
         return self.result(limit = 1)[0]
 
+    def reddit_url(self):
+        return reddit_search_url + self.query_string()
+
     def update_last_run_utc(self, last_run_utc):
         self.last_run_utc = last_run_utc
         self.save()
@@ -112,10 +114,17 @@ class RedditWatchedSearch(BaseModel):
     def user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 
-    @staticmethod
-    def query_string(params):
+    def params(self, limit):
+        return {
+                'limit': limit,
+                'q': self.query,
+                'sort': self.sort,
+                'type': 'link'
+            }
+
+    def query_string(self, limit):
         # custom encode the params to make the query string shorter
-        return urllib.parse.urlencode(params, safe='()')
+        return urllib.parse.urlencode(self.params(limit), safe='()')
 
 class RedditPost:
     def __init__(self, title, posted_utc, url):
@@ -134,6 +143,14 @@ class RedditPost:
 
         return RedditPost(title, posted_utc, url)
 
+    def __eq__(self, other):
+        if isinstance(other, Pushable):
+            return self.title == other.title and self.url == other.url and self.posted_utc == other.posted_utc
+        return False
+
+    def __hash__(self):
+        return 1
+
 class Pushable:
     def __init__(self, title = None, body = None, url = None):
         self.title = title
@@ -151,7 +168,6 @@ class Pushable:
     def __hash__(self):
         return 1
 
-# TODO: fixup pushbullet
 class PushbulletAccount:
     user_agent = USER_AGENT_BEG + USER_AGENT_END
     pb_create_push_url = 'https://api.pushbullet.com/v2/pushes'
