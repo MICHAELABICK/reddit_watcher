@@ -80,16 +80,16 @@ class RedditWatchedSearch(BaseModel):
     @classmethod
     def list(cls):
         for search in cls.select(): # iterate through all searches
-            print(search.uuid + ' ' + search.user_agent_base)
+            print(str(search.uuid) + ' ' + search.user_agent_base)
 
     def result(self, limit = 10, print_search_url=False, print_json_result=False):
         headers = {
-                'User-Agent': self.user_agent()
+                'User-Agent': self._user_agent()
             }
-        params = self.query_string(limit)
+        payload = self._params(limit = limit)
         # print(self.query)
 
-        r = requests.get(self.reddit_json_search, headers = headers, params = params)
+        r = requests.get(self.reddit_json_search, headers = headers, params = self.query_string(payload))
         json_data = r.json()['data']['children'] # contains a list of dicts, with each dict containing a result post's data
         # if print_search_url: print(r.url) # print json search url
         if print_search_url: print(self.reddit_url) # print human-readable search url
@@ -105,16 +105,16 @@ class RedditWatchedSearch(BaseModel):
         return self.result(limit = 1)[0]
 
     def reddit_url(self):
-        return reddit_search_url + self.query_string()
+        return reddit_search_url + self.query_string(self._params())
 
     def update_last_run_utc(self, last_run_utc):
         self.last_run_utc = last_run_utc
         self.save()
 
-    def user_agent(self):
+    def _user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 
-    def params(self, limit):
+    def _params(self, limit = None):
         return {
                 'limit': limit,
                 'q': self.query,
@@ -122,9 +122,10 @@ class RedditWatchedSearch(BaseModel):
                 'type': 'link'
             }
 
-    def query_string(self, limit):
+    @staticmethod
+    def query_string(params):
         # custom encode the params to make the query string shorter
-        return urllib.parse.urlencode(self.params(limit), safe='()')
+        return urllib.parse.urlencode(params, safe='()')
 
 class RedditPost:
     def __init__(self, title, posted_utc, url):
@@ -183,7 +184,7 @@ class PushbulletAccount:
                 'url': p.url
             }
 
-        r = requests.post(self.pb_create_push_url, headers = self.post_headers(), json = payload)
+        r = requests.post(self.pb_create_push_url, headers = self._post_headers(), json = payload)
         # print(r.json)
 
     def push_iterable(self, p_list, print_pushes=False):
@@ -191,7 +192,7 @@ class PushbulletAccount:
             self.push_link(p)
             if print_pushes: print(p)
 
-    def post_headers(self):
+    def _post_headers(self):
         return {
                 'Access-Token': self.access_token,
                 'User-Agent': self.user_agent
