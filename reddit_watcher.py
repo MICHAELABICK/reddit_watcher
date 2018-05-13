@@ -149,11 +149,6 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
     class Meta:
         table_name = 'searches'
 
-    def result(self, limit = None, print_search_url=False, print_json_result=False):
-        return super().result(limit = limit,
-                print_search_url = print_search_url,
-                print_json_result = print_json_result)
-
     def update_last_run_utc(self, last_run_utc):
         self.last_run_utc = last_run_utc
         self.save()
