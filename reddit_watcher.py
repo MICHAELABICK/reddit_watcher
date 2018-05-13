@@ -78,16 +78,36 @@ class RedditSearch:
     def __init__(self, query):
         self.query = query
 
-    def result(self, limit = None):
-        raise NotImplementedError
+    def result(self, limit = None, print_search_url=False, print_json_result=False):
+        headers = {
+                'User-Agent': self.user_agent()
+            }
+        payload = self.params(limit = limit)
+        # print(self.query)
 
+        r = requests.get(self.reddit_json_search, headers = headers, params = self.query_string(payload))
+        json_data = r.json()['data']['children'] # contains a list of dicts, with each dict containing a result post's data
+        # if print_search_url: print(r.url) # print json search url
+        if print_search_url: print(self.reddit_url) # print human-readable search url
+        if print_json_result: print(json.dumps(json_data, indent=2))
+
+        result_posts = []
+        for post_data in json_data:
+            result_posts.append(RedditPost.decode(post_data))
+
+        return result_posts
+
+    # returns None if there is no result
     def first_result(self):
-        return self.result(limit = 1)[0]
+        result = self.result(limit = 1)
+        if len(result) == 0:
+            return None
+        return result[0]
 
     def reddit_url(self):
         return reddit_search_url + self.query_string(self.params())
 
-    def _user_agent(self):
+    def user_agent(self):
         return USER_AGENT_BEG + USER_AGENT_END
 
     # if sort is redefined in a subclass, it changes the sorting method
@@ -117,30 +137,16 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
         table_name = 'searches'
 
     def result(self, limit = 10, print_search_url=False, print_json_result=False):
-        headers = {
-                'User-Agent': self._user_agent()
-            }
-        payload = self.params(limit = limit)
-        # print(self.query)
-
-        r = requests.get(self.reddit_json_search, headers = headers, params = self.query_string(payload))
-        json_data = r.json()['data']['children'] # contains a list of dicts, with each dict containing a result post's data
-        # if print_search_url: print(r.url) # print json search url
-        if print_search_url: print(self.reddit_url) # print human-readable search url
-        if print_json_result: print(json.dumps(json_data, indent=2))
-
-        result_posts = []
-        for post_data in json_data:
-            result_posts.append(RedditPost.decode(post_data))
-
-        return result_posts
+        return super().result(limit = limit,
+                print_search_url = print_search_url,
+                print_json_result = print_json_result)
 
     def update_last_run_utc(self, last_run_utc):
         self.last_run_utc = last_run_utc
         self.save()
 
     # redefine the user agent such that each search has a different one
-    def _user_agent(self):
+    def user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 
     def __str__(self):
