@@ -1,6 +1,8 @@
 import unittest
 from reddit_watcher import *
 import urllib
+from datetime import datetime
+from datetime import timedelta
 
 # helper function to test lists
 def assert_list_is_expected(self, test_list, limit, list_type):
@@ -58,6 +60,8 @@ class RedditSearchTestCase(unittest.TestCase):
             with self.subTest('Query: "{s.query}"'.format(s=s)):
                 self.assertIn('python:com.michaelbick.reddit_watcher:v', s.user_agent)
 
+    # TODO: Test params
+
     def test_query_string(self):
         for s in self.searches:
             with self.subTest('Query: "{s.query}"'.format(s=s)):
@@ -92,6 +96,8 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn('python:com.michaelbick.', user_agent)
                 self.assertIn(s.user_agent_base, user_agent)
                 self.assertIn('reddit_watcher:v', user_agent)
+
+    # TODO: Test params
 
     def test_str(self):
         for s in self.searches:

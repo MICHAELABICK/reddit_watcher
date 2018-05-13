@@ -34,7 +34,8 @@ def main():
             posts_to_push.add(create_pushable(search, post))
 
         # remember to only update if the pushables were actually sent
-        search.update_last_run_utc(curr_time)
+        search.last_run_utc = curr_time
+        search.save()
 
     pb.push_iterable(posts_to_push, print_pushes=True)
     db.close()
@@ -148,10 +149,6 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
 
     class Meta:
         table_name = 'searches'
-
-    def update_last_run_utc(self, last_run_utc):
-        self.last_run_utc = last_run_utc
-        self.save()
 
     # redefine the user agent such that each search has a different one
     @property
