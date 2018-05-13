@@ -69,23 +69,23 @@ class BaseModel(Model):
             print(record)
 
 class RedditSearch:
-    reddit_search_url = 'https://reddit.com/search'
-    reddit_json_search = reddit_search_url + '.json'
-    # TODO: determine if I can pass self.default_search_limit as a default argument
+    _reddit_search_url = 'https://reddit.com/search'
+    _reddit_json_search = _reddit_search_url + '.json'
 
-    sort = None
+    _def_search_limit = None
+    _sort = None
 
     def __init__(self, query):
         self.query = query
 
     def result(self, limit = None, print_search_url=False, print_json_result=False):
         headers = {
-                'User-Agent': self.user_agent()
+                'User-Agent': self.user_agent
             }
         payload = self.params(limit = limit)
         # print(self.query)
 
-        r = requests.get(self.reddit_json_search, headers = headers, params = self.query_string(payload))
+        r = requests.get(self._reddit_json_search, headers = headers, params = self.query_string(payload))
         json_data = r.json()['data']['children'] # contains a list of dicts, with each dict containing a result post's data
         # if print_search_url: print(r.url) # print json search url
         if print_search_url: print(self.reddit_url) # print human-readable search url
@@ -104,14 +104,25 @@ class RedditSearch:
             return None
         return result[0]
 
+    @property
     def reddit_url(self):
-        return reddit_search_url + self.query_string(self.params())
+        return _reddit_search_url + self.query_string(self.params())
 
+    @property
     def user_agent(self):
         return USER_AGENT_BEG + USER_AGENT_END
 
+    @property
+    def def_search_limit(self):
+        return self._def_search_limit
+
+    @property
+    def sort(self):
+        return self._sort
+
     # if sort is redefined in a subclass, it changes the sorting method
     def params(self, limit = None):
+        if limit is None: limit = self.def_search_limit
         return {
                 'limit': limit,
                 'q': self.query,
@@ -131,12 +142,14 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
     user_agent_base = TextField()
     last_run_utc    = TimestampField()
 
-    sort = 'new'
+    # override the superclass limit and sort, used in RedditSearch.params()
+    _def_search_limit = 10
+    _sort = 'new'
 
     class Meta:
         table_name = 'searches'
 
-    def result(self, limit = 10, print_search_url=False, print_json_result=False):
+    def result(self, limit = None, print_search_url=False, print_json_result=False):
         return super().result(limit = limit,
                 print_search_url = print_search_url,
                 print_json_result = print_json_result)
@@ -146,6 +159,7 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
         self.save()
 
     # redefine the user agent such that each search has a different one
+    @property
     def user_agent(self):
         return USER_AGENT_BEG + self.user_agent_base + '_' + USER_AGENT_END
 

@@ -56,7 +56,7 @@ class RedditSearchTestCase(unittest.TestCase):
     def test_user_agent(self):
         for s in self.searches:
             with self.subTest('Query: "{s.query}"'.format(s=s)):
-                self.assertIn('python:com.michaelbick.reddit_watcher:v', s.user_agent())
+                self.assertIn('python:com.michaelbick.reddit_watcher:v', s.user_agent)
 
     def test_query_string(self):
         for s in self.searches:
@@ -76,7 +76,7 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
     def test_result(self):
         for s in self.searches:
             with self.subTest('Default limit search: {s.title}'.format(s=s)):
-                def_limit = 10
+                def_limit = s.def_search_limit
                 result = s.result()
                 assert_list_is_expected(self, result, def_limit, RedditPost)
 
@@ -88,7 +88,7 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
     def test_user_agent(self):
         for s in self.searches:
             with self.subTest('Search Title: {s.title}'.format(s=s)):
-                user_agent = s.user_agent()
+                user_agent = s.user_agent
                 self.assertIn('python:com.michaelbick.', user_agent)
                 self.assertIn(s.user_agent_base, user_agent)
                 self.assertIn('reddit_watcher:v', user_agent)
