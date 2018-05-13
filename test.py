@@ -2,6 +2,13 @@ import unittest
 from reddit_watcher import *
 import urllib
 
+# helper function to test lists
+def assert_list_is_expected(self, test_list, limit, list_type):
+    self.assertIsInstance(test_list, list)
+    self.assertTrue(len(test_list) <= limit)
+    for post in test_list:
+        self.assertIsInstance(post, list_type)
+
 class RedditSearchTestCase(unittest.TestCase):
     def setUp(self):
         queries = [
@@ -34,10 +41,7 @@ class RedditSearchTestCase(unittest.TestCase):
             s = self.many_res_search
             limit = 42
             result = s.result(limit = limit)
-
-            self.assertIsInstance(result, list)
-            self.assertEqual(len(result), limit)
-            self.assertIsInstance(result[27], RedditPost)
+            assert_list_is_expected(self, result, limit, RedditPost)
 
     # remember that this WILL error if not connected to the internet
     def test_first_result(self):
@@ -63,6 +67,38 @@ class RedditSearchTestCase(unittest.TestCase):
                 decoded_query = decoded_params['q'][0]
 
                 self.assertEqual(s.query, decoded_query)
+
+class RedditWatchedSearchTestCase(unittest.TestCase):
+    def setUp(self):
+        self.searches = RedditWatchedSearch.select()
+
+    # remember that this WILL error if not connected to the internet
+    def test_result(self):
+        for s in self.searches:
+            with self.subTest('Default limit search: {s.title}'.format(s=s)):
+                def_limit = 10
+                result = s.result()
+                assert_list_is_expected(self, result, def_limit, RedditPost)
+
+            with self.subTest('Search with limit: {s.title}'.format(s=s)):
+                limit = 25
+                result = s.result(limit = limit)
+                assert_list_is_expected(self, result, limit, RedditPost)
+
+    def test_user_agent(self):
+        for s in self.searches:
+            with self.subTest('Search Title: {s.title}'.format(s=s)):
+                user_agent = s.user_agent()
+                self.assertIn('python:com.michaelbick.', user_agent)
+                self.assertIn(s.user_agent_base, user_agent)
+                self.assertIn('reddit_watcher:v', user_agent)
+
+    def test_str(self):
+        for s in self.searches:
+            with self.subTest('Search Title: {s.title}'.format(s=s)):
+                string = str(s)
+                self.assertIn(str(s.uuid), string)
+                self.assertIn(s.user_agent_base, string)
 
 if __name__ == '__main__':
     unittest.main()
