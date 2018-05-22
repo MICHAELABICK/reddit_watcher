@@ -2,7 +2,6 @@ import unittest
 from reddit_watcher import *
 import urllib
 from datetime import datetime
-from datetime import timedelta
 
 # helper function to test lists
 def assert_list_is_expected(self, test_list, limit, list_type):
@@ -105,6 +104,30 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 string = str(s)
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
+
+class RedditPostTestCase(unittest.TestCase):
+    def setUp(self):
+        post1_data = {
+                'title': 'Test Title',
+                'created_utc': '123456',
+                'url': 'www.thisisatest.com'
+            }
+        item1_data = {'data': post1_data}
+        post1 = RedditPost.decode(item1_data)
+
+        self.post1_data = post1_data
+        self.post1 = post1
+
+    def test_pushable_props(self):
+        with self.subTest('Manually Created Post'):
+            self.assertEqual(self.post1.push_title, self.post1_data['title'])
+            self.assertEqual(self.post1.push_body, None)
+            self.assertEqual(self.post1.push_url, self.post1_data['url'])
+
+    def test_str(self):
+        with self.subTest('Manually Created Post'):
+            self.assertIsInstance(str(self.post1), str)
+
 
 if __name__ == '__main__':
     unittest.main()
