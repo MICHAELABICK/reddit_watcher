@@ -65,13 +65,43 @@ class BaseModel(Model):
             print(record)
 
 # TODO: Add generalized RedditGetRequest class
-# class RedditGetRequest:
-#     def __init__(self, url):
-#         self.url = url
+class RedditGetRequest:
+    def __init__(self, url):
+        self._url = url
 
-#     @property
-#     def user_agent(self):
-#         return USER_AGENT_BEG + USER_AGENT_END
+    @property
+    def items(self):
+        headers = {
+                'User-Agent': self.user_agent
+            }
+
+        # TODO: figure out how to include params
+        r = requests.get(self.url + '.json', headers = headers)
+        # TODO: come up with a less primitive way of determining if the json
+        #     result is a post or search
+        json_data = r.json() # contains a list of dicts, with each dict containing a result post's data
+        listing = self._first_listing(json_data)
+        item_list = listing['data']['children'] # contains a list of dicts, with each dict containing a result post's data
+
+        result_posts = []
+        for item_data in item_list:
+            result_posts.append(RedditPost.decode(item_data))
+
+        return result_posts
+
+    @property
+    def url(self):
+        return self._url
+
+    @property
+    def user_agent(self):
+        return USER_AGENT_BEG + USER_AGENT_END
+
+    @staticmethod
+    def _first_listing(json_data):
+        if isinstance(json_data, list):
+            return json_data[0]
+        return json_data # otherwise this IS a listing
 
 class RedditSearch:
     _reddit_search_url = 'https://reddit.com/search'

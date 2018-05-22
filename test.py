@@ -115,8 +115,18 @@ class RedditPostTestCase(unittest.TestCase):
         item1_data = {'data': post1_data}
         post1 = RedditPost.decode(item1_data)
 
+        post2_data = {
+                'title': 'NVMe recommendations',
+                'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
+                'posted_utc': 10
+            }
+        items2 = RedditGetRequest(post2_data['url']).items
+
         self.post1_data = post1_data
         self.post1 = post1
+        self.post2_data = post2_data
+        self.post2 = items2[0]
+        self.posts = [post1, self.post2]
 
     def test_pushable_props(self):
         with self.subTest('Manually Created Post'):
@@ -124,9 +134,17 @@ class RedditPostTestCase(unittest.TestCase):
             self.assertEqual(self.post1.push_body, None)
             self.assertEqual(self.post1.push_url, self.post1_data['url'])
 
+        with self.subTest('Post from URL'):
+            self.assertEqual(self.post2.push_title, self.post2_data['title'])
+            self.assertEqual(self.post2.push_body, None)
+            self.assertEqual(self.post2.push_url, self.post2_data['url'])
+
     def test_str(self):
         with self.subTest('Manually Created Post'):
             self.assertIsInstance(str(self.post1), str)
+
+        with self.subTest('Post from URL'):
+            self.assertIsInstance(str(self.post2), str)
 
 
 if __name__ == '__main__':
