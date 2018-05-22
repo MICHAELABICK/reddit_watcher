@@ -205,6 +205,7 @@ class Pushable:
     def push_url(self):
         raise NotImplementedError
 
+    # TODO: move this to a 'Printable' class
     def _str_data(self):
         return {
             'title': self.push_title,
@@ -262,7 +263,9 @@ class RedditPost(Pushable):
 
     def __eq__(self, other):
         if isinstance(other, RedditPost):
-            return self.title == other.title and self.url == other.url and self.posted_utc == other.posted_utc
+            return Pushable.__eq__(self, other) and self.title == other.title \
+                    and self.url == other.url \
+                    and self.posted_utc == other.posted_utc
         return False
 
     def __hash__(self):

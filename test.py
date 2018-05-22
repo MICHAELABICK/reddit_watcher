@@ -12,6 +12,13 @@ def assert_list_is_expected(self, test_list, limit, list_type):
 
 class RedditSearchTestCase(unittest.TestCase):
     def setUp(self):
+        self.no_res_search = RedditSearch('it is impossible for there to be results 02415927&32#@1?5')
+        self.many_res_search = RedditSearch('reddit')
+        self.searches = [
+                self.no_res_search,
+                self.many_res_search
+            ]
+
         queries = [
                 'this is a search query',
                 'this AND that',
@@ -20,17 +27,8 @@ class RedditSearchTestCase(unittest.TestCase):
                 '"also check" AND ("that quotes" OR "work too")',
                 'how about gib%$3@!^)(-_eriSh'
             ]
-        searches = []
         for q in queries:
-            searches.append(RedditSearch(q))
-
-        no_res_search = RedditSearch('it is impossible for there to be results 02415927&32#@1?5')
-        many_res_search = RedditSearch('reddit')
-        searches.extend([no_res_search, many_res_search])
-
-        self.no_res_search = no_res_search
-        self.many_res_search = many_res_search
-        self.searches = searches
+            self.searches.append(RedditSearch(q))
 
     # remember that this WILL error if not connected to the internet
     def test_result(self):
@@ -107,13 +105,42 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
 
 class RedditPostTestCase(unittest.TestCase):
     def setUp(self):
+        self.copy1 = {
+                'type': 'manual',
+                'title': 'Test Title',
+                'url': 'www.thisisatest.com',
+                'posted_utc': 123456
+            }
+        self.copy2 = {
+                'type': 'manual',
+                'title': 'Test Title',
+                'url': 'www.thisisatest.com',
+                'posted_utc': 123456
+            }
+        self.dif_title = {
+                'type': 'manual',
+                'title': 'Different Title',
+                'url': 'www.thisisatest.com',
+                'posted_utc': 123456
+            }
+        self.dif_url = {
+                'type': 'manual',
+                'title': 'Test Title',
+                'url': 'www.difurl.com',
+                'posted_utc': 123456
+            }
+        self.dif_time = {
+                'type': 'manual',
+                'title': 'Test Title',
+                'url': 'www.thisisatest.com',
+                'posted_utc': 111111
+            }
         self.test_posts = [
-                {
-                    'type': 'manual',
-                    'title': 'Test Title',
-                    'url': 'www.thisisatest.com',
-                    'posted_utc': 123456
-                },
+                self.copy1,
+                self.copy2,
+                self.dif_title,
+                self.dif_url,
+                self.dif_time,
                 {
                     'type': 'get_req',
                     'title': 'NVMe recommendations',
@@ -136,6 +163,14 @@ class RedditPostTestCase(unittest.TestCase):
 
             tp['post'] = post_obj
 
+    def test_props(self):
+        for p in self.test_posts:
+            with self.subTest('Post creation type: ' + p['type']):
+                post_obj = p['post']
+                self.assertEqual(post_obj.title, p['title']),
+                self.assertEqual(post_obj.url, p['url']),
+                self.assertEqual(post_obj.posted_utc, datetime.utcfromtimestamp(p['posted_utc']))
+
     def test_pushable_props(self):
         for p in self.test_posts:
             with self.subTest('Post creation type: ' + p['type']):
@@ -149,6 +184,12 @@ class RedditPostTestCase(unittest.TestCase):
             with self.subTest('Post creation type: ' + p['type']):
                 post_obj = p['post']
                 self.assertIsInstance(str(post_obj), str)
+
+    def test_eq(self):
+        self.assertEqual(self.copy1, self.copy2)
+        self.assertNotEqual(self.copy1, self.dif_title)
+        self.assertNotEqual(self.copy1, self.dif_url)
+        self.assertNotEqual(self.copy1, self.dif_time)
 
 
 if __name__ == '__main__':
