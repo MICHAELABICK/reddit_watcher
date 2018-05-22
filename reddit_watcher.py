@@ -224,10 +224,10 @@ class Pushable:
         return 1
 
 class RedditPost(Pushable):
-    def __init__(self, title, posted_utc, url):
+    def __init__(self, title, url, posted_utc):
         self.title      = title
-        self.posted_utc = posted_utc # should be datetime object
         self.url        = url
+        self.posted_utc = posted_utc # should be datetime object
 
     @staticmethod
     def decode(item_data):
@@ -239,7 +239,7 @@ class RedditPost(Pushable):
         # convert the posted_utc integer to a datetime object
         posted_utc = datetime.utcfromtimestamp(int(posted_utc))
 
-        return RedditPost(title, posted_utc, url)
+        return RedditPost(title, url, posted_utc)
 
     @property
     def push_title(self):

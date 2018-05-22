@@ -107,44 +107,48 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
 
 class RedditPostTestCase(unittest.TestCase):
     def setUp(self):
-        post1_data = {
-                'title': 'Test Title',
-                'created_utc': '123456',
-                'url': 'www.thisisatest.com'
-            }
-        item1_data = {'data': post1_data}
-        post1 = RedditPost.decode(item1_data)
+        self.test_posts = [
+                {
+                    'type': 'manual',
+                    'title': 'Test Title',
+                    'url': 'www.thisisatest.com',
+                    'posted_utc': 123456
+                },
+                {
+                    'type': 'get_req',
+                    'title': 'NVMe recommendations',
+                    'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
+                    'posted_utc': 1509485184
+                }
+            ]
 
-        post2_data = {
-                'title': 'NVMe recommendations',
-                'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
-                'posted_utc': 10
-            }
-        items2 = RedditGetRequest(post2_data['url']).items
+        for tp in self.test_posts:
+            if tp['type'] == 'manual':
+                post_data = {
+                        'title':       tp['title'],
+                        'url':         tp['url'],
+                        'created_utc': str(tp['posted_utc'])
+                    }
+                item_data = {'data': post_data}
+                post_obj = RedditPost.decode(item_data)
+            else:
+                post_obj = RedditGetRequest(tp['url']).items[0]
 
-        self.post1_data = post1_data
-        self.post1 = post1
-        self.post2_data = post2_data
-        self.post2 = items2[0]
-        self.posts = [post1, self.post2]
+            tp['post'] = post_obj
 
     def test_pushable_props(self):
-        with self.subTest('Manually Created Post'):
-            self.assertEqual(self.post1.push_title, self.post1_data['title'])
-            self.assertEqual(self.post1.push_body, None)
-            self.assertEqual(self.post1.push_url, self.post1_data['url'])
-
-        with self.subTest('Post from URL'):
-            self.assertEqual(self.post2.push_title, self.post2_data['title'])
-            self.assertEqual(self.post2.push_body, None)
-            self.assertEqual(self.post2.push_url, self.post2_data['url'])
+        for p in self.test_posts:
+            with self.subTest('Post creation type: ' + p['type']):
+                post_obj = p['post']
+                self.assertEqual(post_obj.push_title, p['title'])
+                self.assertEqual(post_obj.push_body, None)
+                self.assertEqual(post_obj.push_url, p['url'])
 
     def test_str(self):
-        with self.subTest('Manually Created Post'):
-            self.assertIsInstance(str(self.post1), str)
-
-        with self.subTest('Post from URL'):
-            self.assertIsInstance(str(self.post2), str)
+        for p in self.test_posts:
+            with self.subTest('Post creation type: ' + p['type']):
+                post_obj = p['post']
+                self.assertIsInstance(str(post_obj), str)
 
 
 if __name__ == '__main__':
