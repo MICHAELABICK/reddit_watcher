@@ -225,9 +225,9 @@ class Pushable:
     # TODO: move this to a 'Printable' class
     def _str_data(self):
         return {
-            'title': self.push_title,
-            'body': self.push_body,
-            'url': self.push_url
+            'push_title': self.push_title,
+            'push_body': self.push_body,
+            'push_url': self.push_url
         }
 
     def __str__(self):
@@ -274,11 +274,13 @@ class RedditPost(Pushable):
         return self.url
 
     def _str_data(self):
-        return {
-            'title': self.title,
-            'url': self.url,
-            'post time (utc)': self.posted_utc.strftime("%Y-%m-%d %H:%M:%S")
-        }
+        str_data = {
+                'title': self.title,
+                'url': self.url,
+                'post time (utc)': self.posted_utc.strftime("%Y-%m-%d %H:%M:%S")
+            }
+        str_data.update(super()._str_data())
+        return str_data
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
@@ -315,8 +317,8 @@ class RedditDeal(RedditPost):
         super().__init__(post.title, post.url, post.posted_utc)
 
     def combine_searches(self, other):
-        # self._searches.union(other.searches)
-        self._searches.extend(other.searches)
+        # self.searches.union(other.searches)
+        self.searches.extend(other.searches)
 
     @property
     def searches(self):
@@ -325,13 +327,27 @@ class RedditDeal(RedditPost):
     @property
     def push_title(self):
         # TODO: rewrite to include all searches
-        return 'New ' + self.searches[0].title.lower() + ' deal: ' + self.title
+        return self._format_searches_str() + ' deal: ' + self.title
 
     def _str_data(self):
         str_data = super()._str_data()
         # TODO: rewrite to include all searches
         str_data['result of searches'] = self.searches[0].user_agent_base
         return str_data
+
+    def _format_searches_str(self):
+        out = ''
+        length = len(self.searches)
+        for i in range(0, length):
+            s_title = self.searches[i].title.lower()
+            if i == 0:
+                out += s_title.capitalize()
+            elif i == length - 1:
+                out += ', and ' + s_title
+            else:
+                out += ', ' + s_title
+
+        return out
 
 class PushbulletAccount:
     user_agent = USER_AGENT_BEG + USER_AGENT_END
@@ -352,7 +368,7 @@ class PushbulletAccount:
         # print(r.json)
 
     def push_iterable(self, p_list, print_pushes=False):
-        if print_pushes: print('Printed the following pushables:')
+        if print_pushes: print('Pushed the following pushables:')
 
         for p in p_list:
             # self.push_link(p)
