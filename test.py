@@ -10,6 +10,18 @@ def assert_list_is_expected(self, test_list, limit, list_type):
     for post in test_list:
         self.assertIsInstance(post, list_type)
 
+# helper functions to test dicts
+def assert_value_equal(self, key, dict1, dict2):
+    self.assertEqual(dict1[key], dict2[key])
+
+def assert_value_not_equal(self, key, dict1, dict2):
+    self.assertNotEqual(dict1[key], dict2[key])
+
+class BaseTestCases():
+    class BaseRedditPostTestCase(unittest.TestCase):
+        def setUp(self):
+            pass
+
 class RedditSearchTestCase(unittest.TestCase):
     def setUp(self):
         self.no_res_search = RedditSearch('it is impossible for there to be results 02415927&32#@1?5')
@@ -103,7 +115,7 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
 
-class RedditPostTestCase(unittest.TestCase):
+class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
     def setUp(self):
         self.copy1 = {
                 'type': 'decode',
@@ -156,21 +168,9 @@ class RedditPostTestCase(unittest.TestCase):
                 }
             ]
 
-        for tp in self.test_posts:
-            if tp['type'] == 'decode':
-                post_data = {
-                        'title':       tp['title'],
-                        'url':         tp['url'],
-                        'created_utc': str(tp['posted_utc'])
-                    }
-                item_data = {'data': post_data}
-                post_obj = RedditPost.decode(item_data)
-            elif tp['type'] == 'constructor':
-                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
-            else:
-                post_obj = RedditGetRequest(tp['url']).items[0]
-
-            tp['post'] = post_obj
+        # Make sure self.test_posts is created before running
+        # self._generate_posts()
+        self._generate_posts()
 
     def test_props(self):
         for p in self.test_posts:
@@ -195,17 +195,28 @@ class RedditPostTestCase(unittest.TestCase):
                 self.assertIsInstance(str(post_obj), str)
 
     def test_eq(self):
-        self._assert_value_equal('post', self.copy1, self.copy2)
-        self._assert_value_equal('post', self.copy1, self.copy3)
-        self._assert_value_not_equal('post', self.copy1, self.dif_title)
-        self._assert_value_not_equal('post', self.copy1, self.dif_url)
-        self._assert_value_not_equal('post', self.copy1, self.dif_time)
+        assert_value_equal(self, 'post', self.copy1, self.copy2)
+        assert_value_equal(self, 'post', self.copy1, self.copy3)
+        assert_value_not_equal(self, 'post', self.copy1, self.dif_title)
+        assert_value_not_equal(self, 'post', self.copy1, self.dif_url)
+        assert_value_not_equal(self, 'post', self.copy1, self.dif_time)
 
-    def _assert_value_equal(self, key, dict1, dict2):
-        self.assertEqual(dict1[key], dict2[key])
+    def _generate_posts(self):
+        for tp in self.test_posts:
+            if tp['type'] == 'decode':
+                post_data = {
+                        'title':       tp['title'],
+                        'url':         tp['url'],
+                        'created_utc': str(tp['posted_utc'])
+                    }
+                item_data = {'data': post_data}
+                post_obj = RedditPost.decode(item_data)
+            elif tp['type'] == 'constructor':
+                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
+            else:
+                post_obj = RedditGetRequest(tp['url']).items[0]
 
-    def _assert_value_not_equal(self, key, dict1, dict2):
-        self.assertNotEqual(dict1[key], dict2[key])
+            tp['post'] = post_obj
 
 # TODO: Write tests for RedditDeal
 
