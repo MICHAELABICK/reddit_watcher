@@ -8,6 +8,7 @@ name = "pypi"
 [packages]
 requests = "*"
 peewee = {git = "https://github.com/coleifer/peewee", editable = true}
+pytest = "*"
 
 [requires]
 python_version = "3.6"

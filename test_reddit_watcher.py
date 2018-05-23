@@ -1,4 +1,5 @@
 import unittest
+import pytest
 from reddit_watcher import *
 import urllib
 from datetime import datetime
@@ -127,7 +128,96 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
 
-# class TestRedditPostFromGETRequest():
+class Surround():
+    class TestRedditPost:
+        @property
+        def post(self):
+            raise NotImplementedError()
+
+        @property
+        def expected_title(self):
+            raise NotImplementedError()
+
+        @property
+        def expected_url(self):
+            raise NotImplementedError()
+
+        @property
+        def expected_time(self):
+            raise NotImplementedError()
+
+        def test_props(self):
+            assert self.post.title == self.expected_title
+            assert self.post.url == self.expected_url
+            assert self.post.posted_utc == self.expected_time
+
+        def test_pushable_props(self):
+            assert self.post.push_title == self.expected_title
+            assert self.post.push_body == None
+            assert self.post.push_url == self.expected_url
+
+        def test_str(self):
+            assert isinstance(str(self.post), str)
+
+class TestRedditPostFromConstructor(Surround.TestRedditPost):
+    title = 'Test Title'
+    url = 'www.thisisatest.com'
+    posted_utc_int = 123456
+
+    @property
+    def posted_utc(self): return datetime.utcfromtimestamp(self.posted_utc_int)
+
+    @property
+    def post(self): return RedditPost(self.title, self.url, self.posted_utc)
+
+    @property
+    def expected_title(self): return self.title
+
+    @property
+    def expected_url(self): return self.url
+
+    @property
+    def expected_time(self): return self.posted_utc
+
+# class TestRedditPostFromConstructor2(TestRedditPostFromConstructor):
+#     title = 'Different Title'
+
+# class TestRedditPostFromConstructor3(TestRedditPostFromConstructor):
+#     url = 'www.difurl.com'
+
+# class TestRedditPostFromConstructor4(TestRedditPostFromConstructor):
+#     posted_utc_int = 111111
+
+class TestRedditPostFromDecode(TestRedditPostFromConstructor):
+    @property
+    def post(self):
+        post_data = {
+                'title':       self.title,
+                'url':         self.url,
+                'created_utc': str(self.posted_utc_int)
+            }
+        item_data = {'data': post_data}
+        return RedditPost.decode(item_data)
+
+class TestRedditPostFromGETRequest(Surround.TestRedditPost):
+    url  = 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/'
+    post = RedditGetRequest(url).items[0]
+
+    expected_title = 'NVMe recommendations'
+    expected_url   = url
+    expected_time  = datetime.utcfromtimestamp(1509485184)
+
+# class TestRedditPostEquality(unittest.TestCase):
+#     def test_eq(self):
+        # print(str(TestRedditPostFromConstructor.post.title))
+        # self.assertEqual(TestRedditPostFromConstructor.post, \
+        #         TestRedditPostFromDecode.post)
+        # self.assertNotEqual(TestRedditPost.post, \
+        #         TestRedditPostFromConstructor2.post)
+        # self.assertNotEqual(TestRedditPost.post, \
+        #         TestRedditPostFromConstructor3.post)
+        # self.assertNotEqual(TestRedditPost.post, \
+        #         TestRedditPostFromConstructor4.post)
 
 class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
     base_post_format = {
@@ -172,28 +262,6 @@ class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
 
             tp['post'] = post_obj
 
-    def test_props(self):
-        for p in self.test_posts:
-            with self.subTest('Post creation type: ' + p['type']):
-                post_obj = p['post']
-                self.assertEqual(post_obj.title, p['title']),
-                self.assertEqual(post_obj.url, p['url']),
-                self.assertEqual(post_obj.posted_utc, datetime.utcfromtimestamp(p['posted_utc']))
-
-    def test_pushable_props(self):
-        for p in self.test_posts:
-            with self.subTest('Post creation type: ' + p['type']):
-                post_obj = p['post']
-                self.assertEqual(post_obj.push_title, p['title'])
-                self.assertEqual(post_obj.push_body, None)
-                self.assertEqual(post_obj.push_url, p['url'])
-
-    def test_str(self):
-        for p in self.test_posts:
-            with self.subTest('Post creation type: ' + p['type']):
-                post_obj = p['post']
-                self.assertIsInstance(str(post_obj), str)
-
     def test_eq(self):
         assert_value_equal(self, 'post', self.base_post, self.copy1)
         assert_value_equal(self, 'post', self.base_post, self.copy2)
@@ -202,22 +270,6 @@ class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
         assert_value_not_equal(self, 'post', self.base_post, self.dif_time)
 
 # TODO: Write tests for RedditDeal
-class RedditDeal(BaseTestCases.BaseRedditPostTestCase):
-    base_post_format = {
-            'type': 'decode',
-            'title': 'Test Title',
-            'url': 'www.thisisatest.com',
-            'posted_utc': 123456
-        }
-    get_req_post_format = {
-        'type': 'get_req',
-        'title': 'NVMe recommendations',
-        'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
-        'posted_utc': 1509485184
-    }
-
-    def setUp(self):
-        super().setUp()
 
 
 if __name__ == '__main__':

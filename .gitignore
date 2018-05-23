@@ -1,5 +1,6 @@
 *.pyc
 *.db
+.pytest_cache*
 secrets.py
 
 tags
