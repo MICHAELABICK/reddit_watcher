@@ -22,10 +22,10 @@ def main():
         # is created is actually different
     # create an empty set of the deals we will push so that we do not
     # push multiples of overlapping search hits
-    deals_to_push = set()
+    deals_to_push = Deals()
     for search in RedditWatchedSearch.select(): # iterate through all searches
         curr_time = datetime.now()
-        result_posts = search.result(print_search_url=False, print_json_result=True)
+        result_posts = search.result(print_search_url=False, print_json_result=False)
 
         for post in result_posts:
             if post.posted_utc < search.last_run_utc:
@@ -170,6 +170,14 @@ class RedditSearch:
         # custom encode the params to make the query string shorter
         return urllib.parse.urlencode(params, safe='()')
 
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            return self.query == other.query
+        return False
+
+    def __hash__(self):
+        return 1
+
 class RedditWatchedSearch(BaseModel, RedditSearch):
     uuid            = UUIDField()
     title           = TextField()
@@ -191,6 +199,15 @@ class RedditWatchedSearch(BaseModel, RedditSearch):
 
     def __str__(self):
         return '{self.uuid!s} {self.user_agent_base}'.format(self=self)
+
+    def __eq__(self):
+        if isinstance(self, other.__class__):
+            return RedditSearch.__eq__(self, other) \
+                    and self.uuid == other.uuid \
+                    and self.title == other.title \
+                    and self.user_agent_base == other.user_agent_base \
+                    and self.last_run_utc == other.last_run_utc
+        return False
 
 class Pushable:
     @property
@@ -217,8 +234,10 @@ class Pushable:
         return json.dumps(self._str_data(), indent=2)
 
     def __eq__(self, other):
-        if isinstance(other, Pushable):
-            return self.push_title == other.push_title and self.push_body == other.push_body and self.url == other.push_url
+        if isinstance(self, other.__class__):
+            return self.push_title == other.push_title \
+                    and self.push_body == other.push_body \
+                    and self.url == other.push_url
         return False
 
     def __hash__(self):
@@ -262,7 +281,7 @@ class RedditPost(Pushable):
         }
 
     def __eq__(self, other):
-        if isinstance(other, RedditPost):
+        if isinstance(self, other.__class__):
             return Pushable.__eq__(self, other) and self.title == other.title \
                     and self.url == other.url \
                     and self.posted_utc == other.posted_utc
@@ -271,18 +290,47 @@ class RedditPost(Pushable):
     def __hash__(self):
         return 1
 
+class Deals:
+    def __init__(self):
+        self.deals = []
+
+    def add(self, new_deal):
+        if new_deal in self.deals:
+            ind = self.deals.index(other)
+            existing = self.deals.pop(i)
+            existing.combine_searches(new_deal)
+            self.deals.insert(ind, existing)
+        else:
+            self.deals.append(new_deal)
+
+    def __iter__(self):
+        for d in self.deals:
+            yield d
+
+# TODO: rewrite to take advantage of sets
 class RedditDeal(RedditPost):
     def __init__(self, search, post):
-        self.search = search
-        super().__init__(post.title, post.posted_utc, post.url)
+        # self._searches = {search}
+        self._searches = [search]
+        super().__init__(post.title, post.url, post.posted_utc)
+
+    def combine_searches(self, other):
+        # self._searches.union(other.searches)
+        self._searches.extend(other.searches)
+
+    @property
+    def searches(self):
+        return self._searches
 
     @property
     def push_title(self):
-        return 'New ' + self.search.title.lower() + ' deal: ' + self.title
+        # TODO: rewrite to include all searches
+        return 'New ' + self.searches[0].title.lower() + ' deal: ' + self.title
 
     def _str_data(self):
         str_data = super()._str_data()
-        str_data['result of searches'] = self.search.user_agent_base
+        # TODO: rewrite to include all searches
+        str_data['result of searches'] = self.searches[0].user_agent_base
         return str_data
 
 class PushbulletAccount:

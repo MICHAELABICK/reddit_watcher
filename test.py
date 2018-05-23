@@ -106,31 +106,37 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
 class RedditPostTestCase(unittest.TestCase):
     def setUp(self):
         self.copy1 = {
-                'type': 'manual',
+                'type': 'decode',
                 'title': 'Test Title',
                 'url': 'www.thisisatest.com',
                 'posted_utc': 123456
             }
         self.copy2 = {
-                'type': 'manual',
+                'type': 'decode',
+                'title': 'Test Title',
+                'url': 'www.thisisatest.com',
+                'posted_utc': 123456
+            }
+        self.copy3 = {
+                'type': 'constructor',
                 'title': 'Test Title',
                 'url': 'www.thisisatest.com',
                 'posted_utc': 123456
             }
         self.dif_title = {
-                'type': 'manual',
+                'type': 'decode',
                 'title': 'Different Title',
                 'url': 'www.thisisatest.com',
                 'posted_utc': 123456
             }
         self.dif_url = {
-                'type': 'manual',
+                'type': 'decode',
                 'title': 'Test Title',
                 'url': 'www.difurl.com',
                 'posted_utc': 123456
             }
         self.dif_time = {
-                'type': 'manual',
+                'type': 'decode',
                 'title': 'Test Title',
                 'url': 'www.thisisatest.com',
                 'posted_utc': 111111
@@ -138,6 +144,7 @@ class RedditPostTestCase(unittest.TestCase):
         self.test_posts = [
                 self.copy1,
                 self.copy2,
+                self.copy3,
                 self.dif_title,
                 self.dif_url,
                 self.dif_time,
@@ -150,7 +157,7 @@ class RedditPostTestCase(unittest.TestCase):
             ]
 
         for tp in self.test_posts:
-            if tp['type'] == 'manual':
+            if tp['type'] == 'decode':
                 post_data = {
                         'title':       tp['title'],
                         'url':         tp['url'],
@@ -158,6 +165,8 @@ class RedditPostTestCase(unittest.TestCase):
                     }
                 item_data = {'data': post_data}
                 post_obj = RedditPost.decode(item_data)
+            elif tp['type'] == 'constructor':
+                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
             else:
                 post_obj = RedditGetRequest(tp['url']).items[0]
 
@@ -186,10 +195,19 @@ class RedditPostTestCase(unittest.TestCase):
                 self.assertIsInstance(str(post_obj), str)
 
     def test_eq(self):
-        self.assertEqual(self.copy1, self.copy2)
-        self.assertNotEqual(self.copy1, self.dif_title)
-        self.assertNotEqual(self.copy1, self.dif_url)
-        self.assertNotEqual(self.copy1, self.dif_time)
+        self._assert_value_equal('post', self.copy1, self.copy2)
+        self._assert_value_equal('post', self.copy1, self.copy3)
+        self._assert_value_not_equal('post', self.copy1, self.dif_title)
+        self._assert_value_not_equal('post', self.copy1, self.dif_url)
+        self._assert_value_not_equal('post', self.copy1, self.dif_time)
+
+    def _assert_value_equal(self, key, dict1, dict2):
+        self.assertEqual(dict1[key], dict2[key])
+
+    def _assert_value_not_equal(self, key, dict1, dict2):
+        self.assertNotEqual(dict1[key], dict2[key])
+
+# TODO: Write tests for RedditDeal
 
 
 if __name__ == '__main__':
