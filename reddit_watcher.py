@@ -18,13 +18,11 @@ def main():
     db.connect()
     pb = PushbulletAccount(PB_ACCESS_TOKEN)
 
-    # TODO: currently it still pushes multiple because every pushable that
-        # is created is actually different
-    # create an empty set of the deals we will push so that we do not
+    # Create an empty Deals object of the deals we will push so that we do not
     # push multiples of overlapping search hits
     deals_to_push = Deals()
     for search in RedditWatchedSearch.select(): # iterate through all searches
-        curr_time = datetime.now()
+        curr_time = datetime.utcnow()
         result_posts = search.result(print_search_url=False, print_json_result=False)
 
         for post in result_posts:
@@ -326,13 +324,13 @@ class RedditDeal(RedditPost):
 
     @property
     def push_title(self):
-        # TODO: rewrite to include all searches
         return self._format_searches_str() + ' deal: ' + self.title
 
     def _str_data(self):
         str_data = super()._str_data()
         # TODO: rewrite to include all searches
-        str_data['result of searches'] = self.searches[0].user_agent_base
+        # str_data['result of searches'] = self.searches[0].user_agent_base
+        str_data['result of searches'] = ", ".join([s.user_agent_base for s in self.searches])
         return str_data
 
     def _format_searches_str(self):
@@ -371,7 +369,7 @@ class PushbulletAccount:
         if print_pushes: print('Pushed the following pushables:')
 
         for p in p_list:
-            # self.push_link(p)
+            self.push_link(p)
             if print_pushes: print(p)
 
     def _post_headers(self):
