@@ -20,7 +20,19 @@ def assert_value_not_equal(self, key, dict1, dict2):
 class BaseTestCases():
     class BaseRedditPostTestCase(unittest.TestCase):
         def setUp(self):
-            pass
+            self.base_post    = self.base_post_format.copy()
+            self.get_req_post = self.get_req_post_format.copy()
+
+            self.copy1     = self.base_post.copy()
+            self.copy2     = self.base_post.copy()
+            self.dif_title = self.base_post.copy()
+            self.dif_url   = self.base_post.copy()
+            self.dif_time  = self.base_post.copy()
+
+            self.copy2['type'] = 'constructor'
+            self.dif_title['title'] = 'Different Title'
+            self.dif_url['url'] = 'www.difurl.com'
+            self.dif_time['posted_utc'] = 111111
 
 class RedditSearchTestCase(unittest.TestCase):
     def setUp(self):
@@ -115,62 +127,50 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
 
+# class TestRedditPostFromGETRequest():
+
 class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
+    base_post_format = {
+            'type': 'decode',
+            'title': 'Test Title',
+            'url': 'www.thisisatest.com',
+            'posted_utc': 123456
+        }
+    get_req_post_format = {
+        'type': 'get_req',
+        'title': 'NVMe recommendations',
+        'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
+        'posted_utc': 1509485184
+    }
+
     def setUp(self):
-        self.copy1 = {
-                'type': 'decode',
-                'title': 'Test Title',
-                'url': 'www.thisisatest.com',
-                'posted_utc': 123456
-            }
-        self.copy2 = {
-                'type': 'decode',
-                'title': 'Test Title',
-                'url': 'www.thisisatest.com',
-                'posted_utc': 123456
-            }
-        self.copy3 = {
-                'type': 'constructor',
-                'title': 'Test Title',
-                'url': 'www.thisisatest.com',
-                'posted_utc': 123456
-            }
-        self.dif_title = {
-                'type': 'decode',
-                'title': 'Different Title',
-                'url': 'www.thisisatest.com',
-                'posted_utc': 123456
-            }
-        self.dif_url = {
-                'type': 'decode',
-                'title': 'Test Title',
-                'url': 'www.difurl.com',
-                'posted_utc': 123456
-            }
-        self.dif_time = {
-                'type': 'decode',
-                'title': 'Test Title',
-                'url': 'www.thisisatest.com',
-                'posted_utc': 111111
-            }
+        super().setUp()
+
         self.test_posts = [
+                self.base_post,
                 self.copy1,
                 self.copy2,
-                self.copy3,
                 self.dif_title,
                 self.dif_url,
                 self.dif_time,
-                {
-                    'type': 'get_req',
-                    'title': 'NVMe recommendations',
-                    'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
-                    'posted_utc': 1509485184
-                }
+                self.get_req_post
             ]
 
-        # Make sure self.test_posts is created before running
-        # self._generate_posts()
-        self._generate_posts()
+        for tp in self.test_posts:
+            if tp['type'] == 'decode':
+                post_data = {
+                        'title':       tp['title'],
+                        'url':         tp['url'],
+                        'created_utc': str(tp['posted_utc'])
+                    }
+                item_data = {'data': post_data}
+                post_obj = RedditPost.decode(item_data)
+            elif tp['type'] == 'constructor':
+                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
+            else:
+                post_obj = RedditGetRequest(tp['url']).items[0]
+
+            tp['post'] = post_obj
 
     def test_props(self):
         for p in self.test_posts:
@@ -195,30 +195,29 @@ class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
                 self.assertIsInstance(str(post_obj), str)
 
     def test_eq(self):
-        assert_value_equal(self, 'post', self.copy1, self.copy2)
-        assert_value_equal(self, 'post', self.copy1, self.copy3)
-        assert_value_not_equal(self, 'post', self.copy1, self.dif_title)
-        assert_value_not_equal(self, 'post', self.copy1, self.dif_url)
-        assert_value_not_equal(self, 'post', self.copy1, self.dif_time)
-
-    def _generate_posts(self):
-        for tp in self.test_posts:
-            if tp['type'] == 'decode':
-                post_data = {
-                        'title':       tp['title'],
-                        'url':         tp['url'],
-                        'created_utc': str(tp['posted_utc'])
-                    }
-                item_data = {'data': post_data}
-                post_obj = RedditPost.decode(item_data)
-            elif tp['type'] == 'constructor':
-                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
-            else:
-                post_obj = RedditGetRequest(tp['url']).items[0]
-
-            tp['post'] = post_obj
+        assert_value_equal(self, 'post', self.base_post, self.copy1)
+        assert_value_equal(self, 'post', self.base_post, self.copy2)
+        assert_value_not_equal(self, 'post', self.base_post, self.dif_title)
+        assert_value_not_equal(self, 'post', self.base_post, self.dif_url)
+        assert_value_not_equal(self, 'post', self.base_post, self.dif_time)
 
 # TODO: Write tests for RedditDeal
+class RedditDeal(BaseTestCases.BaseRedditPostTestCase):
+    base_post_format = {
+            'type': 'decode',
+            'title': 'Test Title',
+            'url': 'www.thisisatest.com',
+            'posted_utc': 123456
+        }
+    get_req_post_format = {
+        'type': 'get_req',
+        'title': 'NVMe recommendations',
+        'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
+        'posted_utc': 1509485184
+    }
+
+    def setUp(self):
+        super().setUp()
 
 
 if __name__ == '__main__':

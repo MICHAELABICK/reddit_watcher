@@ -328,8 +328,6 @@ class RedditDeal(RedditPost):
 
     def _str_data(self):
         str_data = super()._str_data()
-        # TODO: rewrite to include all searches
-        # str_data['result of searches'] = self.searches[0].user_agent_base
         str_data['result of searches'] = ", ".join([s.user_agent_base for s in self.searches])
         return str_data
 
