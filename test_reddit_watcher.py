@@ -128,16 +128,17 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
 
-@pytest.fixture(scope="module", params=[
+@pytest.fixture(scope="class", params=[
     'base',
-    # 'copy',
-    # 'dif_title',
-    # 'dif_url',
-    # 'dif_time',
-    # 'decode',
-    # 'get_req'
+    'copy',
+    'dif_title',
+    'dif_url',
+    'dif_time',
+    'decode',
+    'get_req'
 ])
 def post_test_case(request):
+    # print('New post_test_case created: {}'.format(request.param))
     return reddit_post_test_case_factory(request.param)
 
 @pytest.mark.usefixtures("post_test_case")
@@ -199,7 +200,8 @@ def reddit_post_test_case_factory(case_abbrev):
         for tc in test_cases:
             # print(tc)
             try:
-                if tc.case_abbrev == case_abbrev: return tc
+                if tc.case_abbrev == case_abbrev:
+                    return tc()
             except NotImplementedError:
                 pass
 
@@ -272,8 +274,8 @@ class RedditPostFromDecodeTestCase(RedditPostCreatedManuallyTestCase):
 
 class RedditPostFromGETRequestTestCase(RedditPostTestCase):
     @property
-    def post():
-       return RedditGetRequest(url).items[0]
+    def post(self):
+       return RedditGetRequest(self.url).items[0]
 
 # def test_reddit_post_eq(self):
 #     print(str(TestRedditPostFromConstructor.post.title))
