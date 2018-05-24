@@ -248,6 +248,18 @@ class RedditPost(Pushable):
         self.url        = url
         self.posted_utc = posted_utc # should be datetime object
 
+    # def __init__(self, **kwargs):
+    #     if set(['title', 'url', 'posted_utc']).issubset(kwargs.keys()):
+    #         self.title      = title
+    #         self.url        = url
+    #         self.posted_utc = posted_utc # should be datetime object
+    #     elif 'item_data' in kwargs.keys():
+    #         # TODO: figure this out
+    #         # self.decode
+    #     elif 'get_url' in kwargs.keys():
+    #         # TODO: figure this out
+    #     raise ValueError("Not enough keyword arguments to construct a RedditPost")
+
     @staticmethod
     def decode(item_data):
         post_data  = item_data['data']
@@ -261,8 +273,38 @@ class RedditPost(Pushable):
         return RedditPost(title, url, posted_utc)
 
     @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        if not isinstance(value, str):
+            raise TypeError("'title' must be a str")
+        self._title = value
+
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, value):
+        if not isinstance(value, str):
+            raise TypeError("'url' must be a str")
+        self._url = value
+
+    @property
+    def posted_utc(self):
+        return self._posted_utc
+
+    @posted_utc.setter
+    def posted_utc(self, value):
+        if not isinstance(value, datetime):
+            raise TypeError("'posted_utc' must be a datetime")
+        self._posted_utc = value
+
+    @property
     def push_title(self):
-        return self.title
+        return self._title
 
     @property
     def push_body(self):
@@ -270,7 +312,7 @@ class RedditPost(Pushable):
 
     @property
     def push_url(self):
-        return self.url
+        return self._url
 
     def _str_data(self):
         str_data = {

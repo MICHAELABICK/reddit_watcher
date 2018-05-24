@@ -202,13 +202,10 @@ def reddit_post_test_case_factory(case_abbrev):
             try:
                 if tc.case_abbrev == case_abbrev:
                     return tc()
-            except NotImplementedError:
-                pass
-
-        print(test_cases)
-        raise ValueError
-    else:
-        raise TypeError
+            except NotImplementedError: pass
+        # print(test_cases)
+        raise ValueError("Could not find a RedditPostTestCase with the given 'case_abbrev'")
+    raise TypeError("'case_abbrev' must be a str")
 
 class RedditPostTestCase:
     @property
