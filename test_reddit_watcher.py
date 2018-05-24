@@ -128,47 +128,123 @@ class RedditWatchedSearchTestCase(unittest.TestCase):
                 self.assertIn(str(s.uuid), string)
                 self.assertIn(s.user_agent_base, string)
 
-class Surround():
-    class TestRedditPost:
-        @property
-        def post(self):
-            raise NotImplementedError()
+@pytest.fixture(scope="module", params=[
+    'base',
+    # 'copy',
+    # 'dif_title',
+    # 'dif_url',
+    # 'dif_time',
+    # 'decode',
+    # 'get_req'
+])
+def post_test_case(request):
+    return reddit_post_test_case_factory(request.param)
 
-        @property
-        def expected_title(self):
-            raise NotImplementedError()
+@pytest.mark.usefixtures("post_test_case")
+class TestRedditPostCreation:
+    def test_props(self, post_test_case):
+        assert post_test_case.post.title == post_test_case.expected_title
+        assert post_test_case.post.url == post_test_case.expected_url
+        assert post_test_case.post.posted_utc == post_test_case.expected_time
 
-        @property
-        def expected_url(self):
-            raise NotImplementedError()
+    def test_push_title(self, post_test_case):
+        assert post_test_case.post.push_title == post_test_case.expected_title
 
-        @property
-        def expected_time(self):
-            raise NotImplementedError()
+    def test_push_body(self, post_test_case):
+        assert post_test_case.post.push_body == None
 
-        def test_props(self):
-            assert self.post.title == self.expected_title
-            assert self.post.url == self.expected_url
-            assert self.post.posted_utc == self.expected_time
+    def test_push_url(self, post_test_case):
+        assert post_test_case.post.push_url == post_test_case.expected_url
 
-        def test_pushable_props(self):
-            assert self.post.push_title == self.expected_title
-            assert self.post.push_body == None
-            assert self.post.push_url == self.expected_url
+    def test_str(self, post_test_case):
+        assert isinstance(str(post_test_case.post), str)
 
-        def test_str(self):
-            assert isinstance(str(self.post), str)
+def reddit_post_test_case_factory(case_abbrev):
+    class ManualBase:
+        title          = 'Test Title'
+        url            = 'www.thisisatest.com'
+        posted_utc_int = 123456
 
-class TestRedditPostFromConstructor(Surround.TestRedditPost):
-    title = 'Test Title'
-    url = 'www.thisisatest.com'
-    posted_utc_int = 123456
+    class Base(ManualBase, RedditPostFromConstructorTestCase):
+        case_abbrev    = 'base'
+
+    class Copy(Base):
+        case_abbrev = 'copy'
+
+    class DifTitle(Base):
+        case_abbrev = 'dif_title'
+        title       = 'Dif Title'
+
+    class DifURL(Base):
+        case_abbrev = 'dif_url'
+        url         = 'www.difurl.com'
+
+    class DifTime(Base):
+        case_abbrev    = 'dif_time'
+        posted_utc_int = 111111
+
+    class Decode(ManualBase, RedditPostFromDecodeTestCase):
+        case_abbrev = 'decode'
+
+    class GETRequest(RedditPostFromGETRequestTestCase):
+        case_abbrev    = 'get_req'
+        url            = 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/'
+        expected_title = 'NVMe recommendations'
+        expected_url   = url
+        expected_time  = datetime.utcfromtimestamp(1509485184)
+
+    if isinstance(case_abbrev, str):
+        # return test case with given case_abbrev
+        test_cases = RedditPostTestCase.recursive_subclasses()
+        for tc in test_cases:
+            # print(tc)
+            try:
+                if tc.case_abbrev == case_abbrev: return tc
+            except NotImplementedError:
+                pass
+
+        print(test_cases)
+        raise ValueError
+    else:
+        raise TypeError
+
+class RedditPostTestCase:
+    @property
+    def case_abbrev(self): raise NotImplementedError
+
+    @property
+    def post(self): raise NotImplementedError
+
+    @property
+    def expected_title(self): raise NotImplementedError
+
+    @property
+    def expected_url(self): raise NotImplementedError
+
+    @property
+    def expected_time(self): raise NotImplementedError
+
+    @classmethod
+    def recursive_subclasses(cls):
+        cls_subs = cls.__subclasses__()
+        subs = set(cls_subs)
+        for sub in cls_subs:
+            subs = subs.union(sub.recursive_subclasses())
+        # print(subs)
+        return subs
+
+class RedditPostCreatedManuallyTestCase(RedditPostTestCase):
+    @property
+    def title(self): raise NotImplementedError
+
+    @property
+    def url(self): raise NotImplementedError
+
+    @property
+    def posted_utc_int(self): raise NotImplementedError
 
     @property
     def posted_utc(self): return datetime.utcfromtimestamp(self.posted_utc_int)
-
-    @property
-    def post(self): return RedditPost(self.title, self.url, self.posted_utc)
 
     @property
     def expected_title(self): return self.title
@@ -179,16 +255,11 @@ class TestRedditPostFromConstructor(Surround.TestRedditPost):
     @property
     def expected_time(self): return self.posted_utc
 
-# class TestRedditPostFromConstructor2(TestRedditPostFromConstructor):
-#     title = 'Different Title'
+class RedditPostFromConstructorTestCase(RedditPostCreatedManuallyTestCase):
+    @property
+    def post(self): return RedditPost(self.title, self.url, self.posted_utc)
 
-# class TestRedditPostFromConstructor3(TestRedditPostFromConstructor):
-#     url = 'www.difurl.com'
-
-# class TestRedditPostFromConstructor4(TestRedditPostFromConstructor):
-#     posted_utc_int = 111111
-
-class TestRedditPostFromDecode(TestRedditPostFromConstructor):
+class RedditPostFromDecodeTestCase(RedditPostCreatedManuallyTestCase):
     @property
     def post(self):
         post_data = {
@@ -199,77 +270,27 @@ class TestRedditPostFromDecode(TestRedditPostFromConstructor):
         item_data = {'data': post_data}
         return RedditPost.decode(item_data)
 
-class TestRedditPostFromGETRequest(Surround.TestRedditPost):
-    url  = 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/'
-    post = RedditGetRequest(url).items[0]
+class RedditPostFromGETRequestTestCase(RedditPostTestCase):
+    @property
+    def post():
+       return RedditGetRequest(url).items[0]
 
-    expected_title = 'NVMe recommendations'
-    expected_url   = url
-    expected_time  = datetime.utcfromtimestamp(1509485184)
-
-# class TestRedditPostEquality(unittest.TestCase):
-#     def test_eq(self):
-        # print(str(TestRedditPostFromConstructor.post.title))
-        # self.assertEqual(TestRedditPostFromConstructor.post, \
-        #         TestRedditPostFromDecode.post)
-        # self.assertNotEqual(TestRedditPost.post, \
-        #         TestRedditPostFromConstructor2.post)
-        # self.assertNotEqual(TestRedditPost.post, \
-        #         TestRedditPostFromConstructor3.post)
-        # self.assertNotEqual(TestRedditPost.post, \
-        #         TestRedditPostFromConstructor4.post)
-
-class RedditPostTestCase(BaseTestCases.BaseRedditPostTestCase):
-    base_post_format = {
-            'type': 'decode',
-            'title': 'Test Title',
-            'url': 'www.thisisatest.com',
-            'posted_utc': 123456
-        }
-    get_req_post_format = {
-        'type': 'get_req',
-        'title': 'NVMe recommendations',
-        'url': 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/',
-        'posted_utc': 1509485184
-    }
-
-    def setUp(self):
-        super().setUp()
-
-        self.test_posts = [
-                self.base_post,
-                self.copy1,
-                self.copy2,
-                self.dif_title,
-                self.dif_url,
-                self.dif_time,
-                self.get_req_post
-            ]
-
-        for tp in self.test_posts:
-            if tp['type'] == 'decode':
-                post_data = {
-                        'title':       tp['title'],
-                        'url':         tp['url'],
-                        'created_utc': str(tp['posted_utc'])
-                    }
-                item_data = {'data': post_data}
-                post_obj = RedditPost.decode(item_data)
-            elif tp['type'] == 'constructor':
-                post_obj = RedditPost(tp['title'], tp['url'], datetime.utcfromtimestamp(tp['posted_utc']))
-            else:
-                post_obj = RedditGetRequest(tp['url']).items[0]
-
-            tp['post'] = post_obj
-
-    def test_eq(self):
-        assert_value_equal(self, 'post', self.base_post, self.copy1)
-        assert_value_equal(self, 'post', self.base_post, self.copy2)
-        assert_value_not_equal(self, 'post', self.base_post, self.dif_title)
-        assert_value_not_equal(self, 'post', self.base_post, self.dif_url)
-        assert_value_not_equal(self, 'post', self.base_post, self.dif_time)
+# def test_reddit_post_eq(self):
+#     print(str(TestRedditPostFromConstructor.post.title))
+#     self.assertEqual(TestRedditPostFromConstructor.post, \
+#             RedditPostFromDecodeTestCase.post)
+#     self.assertNotEqual(TestRedditPost.post, \
+#             TestRedditPostFromConstructor2.post)
+#     self.assertNotEqual(TestRedditPost.post, \
+#             TestRedditPostFromConstructor3.post)
+#     self.assertNotEqual(TestRedditPost.post, \
+#             TestRedditPostFromConstructor4.post)
 
 # TODO: Write tests for RedditDeal
+# class RedditDealTestCase(RedditPostTestCase):
+#     @property
+#     def expected_searches(self):
+#         raise NotImplementedError
 
 
 if __name__ == '__main__':

@@ -241,6 +241,7 @@ class Pushable:
     def __hash__(self):
         return 1
 
+# TODO: write a RedditPost factory
 class RedditPost(Pushable):
     def __init__(self, title, url, posted_utc):
         self.title      = title
@@ -307,16 +308,20 @@ class Deals:
         for d in self.deals:
             yield d
 
-# TODO: rewrite to take advantage of sets
 class RedditDeal(RedditPost):
     def __init__(self, search, post):
-        # self._searches = {search}
-        self._searches = [search]
         super().__init__(post.title, post.url, post.posted_utc)
+        # TODO: check if the following will work instead
+        # self = post
+
+        self._searches = [search]
+        # TODO: rewrite to take advantage of sets
+        # self._searches = {search}
 
     def combine_searches(self, other):
-        # self.searches.union(other.searches)
         self.searches.extend(other.searches)
+        # TODO: rewrite to take advantage of sets
+        # self.searches.union(other.searches)
 
     @property
     def searches(self):
