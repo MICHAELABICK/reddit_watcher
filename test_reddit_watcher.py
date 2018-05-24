@@ -189,9 +189,8 @@ def reddit_post_test_case_factory(case_abbrev):
 
     class GETRequest(RedditPostFromGETRequestTestCase):
         case_abbrev    = 'get_req'
-        url            = 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/'
+        get_url        = 'https://www.reddit.com/r/homelab/comments/79z05m/nvme_recommendations/'
         expected_title = 'NVMe recommendations'
-        expected_url   = url
         expected_time  = datetime.utcfromtimestamp(1509485184)
 
     if isinstance(case_abbrev, str):
@@ -271,8 +270,16 @@ class RedditPostFromDecodeTestCase(RedditPostCreatedManuallyTestCase):
 
 class RedditPostFromGETRequestTestCase(RedditPostTestCase):
     @property
+    def get_url(self):
+        raise NotImplementedError
+
+    @property
     def post(self):
-       return RedditGetRequest(self.url).items[0]
+       return RedditPost.from_get_request(self.get_url)
+
+    @property
+    def expected_url(self):
+       return self.get_url
 
 # def test_reddit_post_eq(self):
 #     print(str(TestRedditPostFromConstructor.post.title))

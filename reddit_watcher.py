@@ -248,18 +248,6 @@ class RedditPost(Pushable):
         self.url        = url
         self.posted_utc = posted_utc # should be datetime object
 
-    # def __init__(self, **kwargs):
-    #     if set(['title', 'url', 'posted_utc']).issubset(kwargs.keys()):
-    #         self.title      = title
-    #         self.url        = url
-    #         self.posted_utc = posted_utc # should be datetime object
-    #     elif 'item_data' in kwargs.keys():
-    #         # TODO: figure this out
-    #         # self.decode
-    #     elif 'get_url' in kwargs.keys():
-    #         # TODO: figure this out
-    #     raise ValueError("Not enough keyword arguments to construct a RedditPost")
-
     @staticmethod
     def decode(item_data):
         post_data  = item_data['data']
@@ -271,6 +259,9 @@ class RedditPost(Pushable):
         posted_utc = datetime.utcfromtimestamp(int(posted_utc))
 
         return RedditPost(title, url, posted_utc)
+
+    def from_get_request(url):
+       return RedditGetRequest(url).items[0]
 
     @property
     def title(self):
